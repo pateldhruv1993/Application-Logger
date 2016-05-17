@@ -1,0 +1,22 @@
+﻿FEATURES:
+
+- (?) Make the log be in json
+- Add up focus time (may be store it in an array so that we know when user alt+tabbed out of it and then got back in again AND as total focus time) 
+	each time the app runs to get total window focus time and inactive time.
+- Find a way to log "app::started" and "app:stop" for other Apps
+- Make server and Port for the TCP server editable in config (.cfg) file
+- Make multiple class for logging and main processes
+- Add some more UI elements to the form so you can show debug info and Application log in two different text lables
+- Make reading from tcp stream less frequent (save POWAH)
+- Add code so that the app try to reconnect again after a while in case it couldnt establish a connection the first time
+- Have an initial handshake between TCP server and yourself so that you don't read some other apps data
+- Make a FIFO list of configurable lenght that will store log lines and won't "null" the list upon log saving. This is so that other apps can make requests such as "Give me last 5 entires"
+
+✓ Find a way to log "start" and "end" of Logger
+✓ Connect with the node app using TCP to communicate with it
+
+
+
+CHECK LIST FOR RELEASE:
+
+- Turn "Run on Startup" to TRUE in App.config

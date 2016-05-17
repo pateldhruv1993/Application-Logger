@@ -29,13 +29,16 @@
 #   path=logs\[[year]]_[[month]].log
 #   path=c:\logs\app\[[year]]\[[month]]\[[day]].log
 #
+
 path=logs\[[year]]_[[month]]_[[machine]].log
+
 
 # The time, in seconds, that the computer has to be idle for the user to be considered away.
 #
 # Examples:
 #   idleTime=600
 #
+
 idleTime=600
 
 # The interval, in seconds, for verifying whether the user is in a new application or document.
@@ -43,7 +46,9 @@ idleTime=600
 # Examples:
 #   checkInterval=0.5
 #
+
 checkInterval=0.5
+
 
 # The maximum number of log entries that can be queued at any time before they are committed to the log file.
 #
@@ -52,12 +57,49 @@ checkInterval=0.5
 # Examples:
 #   maxQueueEntries=1000
 #
+
 maxQueueEntries=1000
+
 
 # The maximum amount of time that can pass, in seconds, before the current log entries (if any) are committed to the log file.
 #
 # Examples:
 #   maxQueueTime=300
 #
+
 maxQueueTime=300
+
+
+################################  IPC - TCP Stuff  #############################
+# 
+# Set the server address and port for IPC
+#
+# Examples:
+#   serverAddress=127.0.0.1
+#	serverPort=6969
+#
+
+serverAddress=127.0.0.1
+serverPort=6969
+
+
+# Maximum number of attempts this App should make to connect with the TCP server for IPC
+#  NOTE: If you set this to 0 (Zero) it means make unlmited number of attempts to connect till this app is running
+#
+# Examples:
+#   maxTCPAttempts=0
+#
+
+maxTCPAttempts=0
+
+
+# How frequently should the app read the TCP stream for instructions
+#  NOTE: This is bottle necked by the checkInterval value so no point in setting it lower than that
+#
+# Examples:
+#   TCPInterval=0
+#
+
+TCPInterval=0
+
 
