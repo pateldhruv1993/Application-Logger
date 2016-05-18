@@ -2,6 +2,7 @@
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
@@ -54,12 +55,18 @@ namespace ApplicationLogger
         private int lastDayLineLogged;
         private DateTime lastTimeQueueWritten;
         private List<string> queuedLogMessages;
+        private FixedSizedQueue<string> fixedSizeQueue;
 
         private string configPath;
         private float? configIdleTime;												// In seconds
         private float? configTimeCheckInterval;										// In seconds
         private float? configMaxQueueTime;
         private int? configMaxQueueEntries;
+        private int? configMaxLogCache;
+        private int? configTCPInterval;
+        private int? configMaxTCPAttempts;
+        private string configServerAddress;
+        private int? configServerPort;
 
         private string newUserProcessId;											// Temp
         private StringBuilder lineToLog;											// Temp, used to create the line
@@ -178,19 +185,15 @@ namespace ApplicationLogger
                 byte[] bb = new byte[100];
                 int k = stm.Read(bb, 0, 100);
 
-
-
                 if (k != 0 || k != null)
                 {
                     String receivedData = System.Text.Encoding.Default.GetString(bb);
-                    updateText(receivedData);
+
 
 
                     byte[] ba = asen.GetBytes("Say it don't spray it Ron.");
                     stm.Write(ba, 0, ba.Length);
-
                 }
-
             }
             catch (Exception excep)
             {
@@ -424,11 +427,16 @@ namespace ApplicationLogger
             }
 
             // Interprets config data
-            configPath = configUser.getString("path") ?? configDefault.getString("path");
-            configIdleTime = configUser.getFloat("idleTime") ?? configDefault.getFloat("idleTime");
-            configTimeCheckInterval = configUser.getFloat("checkInterval") ?? configDefault.getFloat("checkInterval");
-            configMaxQueueEntries = configUser.getInt("maxQueueEntries") ?? configDefault.getInt("maxQueueEntries");
-            configMaxQueueTime = configUser.getFloat("maxQueueTime") ?? configDefault.getFloat("maxQueueTime");
+            configPath =                    configUser.getString("path") ?? configDefault.getString("path");
+            configIdleTime =                configUser.getFloat("idleTime") ?? configDefault.getFloat("idleTime");
+            configTimeCheckInterval =       configUser.getFloat("checkInterval") ?? configDefault.getFloat("checkInterval");
+            configMaxQueueEntries =         configUser.getInt("maxQueueEntries") ?? configDefault.getInt("maxQueueEntries");
+            configMaxQueueTime =            configUser.getFloat("maxQueueTime") ?? configDefault.getFloat("maxQueueTime");
+            configTCPInterval =             configUser.getInt("TCPInterval") ?? configDefault.getInt("TCPInterval");
+            configMaxTCPAttempts =          configUser.getInt("maxTCPAttempts") ?? configDefault.getInt("maxTCPAttempts");
+            configServerAddress =           configUser.getString("serverAddress") ?? configDefault.getString("serverAddress");
+            configServerPort =              configUser.getInt("serverPort") ?? configDefault.getInt("serverPort");
+            configMaxLogCache =             configUser.getInt("maxLogCache") ?? configDefault.getInt("maxLogCache");
         }
 
         private void start()
@@ -440,11 +448,10 @@ namespace ApplicationLogger
                 timerCheck.Tick += new EventHandler(onTimer);
                 timerCheck.Interval = (int)(configTimeCheckInterval * 1000f);
                 timerCheck.Start();
-
                 lastUserProcessId = null;
                 lastTimeQueueWritten = DateTime.Now;
                 isRunning = true;
-
+                fixedSizeQueue = new FixedSizedQueue<string>(Int32.Parse(configMaxLogCache +""));
 
 
                 //Log system start (Not really. This just means app started. BUT as I plan to run it on startup, this should be good)
@@ -458,7 +465,7 @@ namespace ApplicationLogger
                     tcpclient = new TcpClient();
                     Console.WriteLine("Connecting.....");
 
-                    tcpclient.Connect("127.0.0.1", 6969);
+                    tcpclient.Connect(configServerAddress, Int32.Parse(configServerPort + ""));
                     // use the ipaddress as in the server program
 
                     Console.WriteLine("Connected");
@@ -492,8 +499,7 @@ namespace ApplicationLogger
                     Console.WriteLine("Error:: " + e.StackTrace);
                 }
 
-
-
+                
                 logStop();
 
                 timerCheck.Stop();
@@ -593,6 +599,8 @@ namespace ApplicationLogger
             //Console.Write("LOG ==> " + lineToLog.ToString());
 
             queuedLogMessages.Add(lineToLog.ToString());
+            fixedSizeQueue.Enqueue(lineToLog.ToString());
+
             lastDayLineLogged = DateTime.Now.Day;
 
             if (queuedLogMessages.Count > configMaxQueueEntries || forceCommit)
@@ -774,4 +782,33 @@ namespace ApplicationLogger
             return (pathOnly.Length > 0 ? pathOnly + "\\" : "") + fileOnly;
         }
     }
+
+
+
+
+    public class FixedSizedQueue<T> : ConcurrentQueue<T>
+    {
+        private readonly object syncObject = new object();
+
+        public int Size { get; private set; }
+
+        public FixedSizedQueue(int size)
+        {
+            Size = size;
+        }
+
+        public new void Enqueue(T obj)
+        {
+            base.Enqueue(obj);
+            lock (syncObject)
+            {
+                while (base.Count > Size)
+                {
+                    T outObj;
+                    base.TryDequeue(out outObj);
+                }
+            }
+        }
+    }
+
 }

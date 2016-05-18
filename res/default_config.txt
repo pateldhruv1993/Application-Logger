@@ -103,3 +103,10 @@ maxTCPAttempts=0
 TCPInterval=0
 
 
+# This is the max number of most recent logs the program will store no matter what
+#
+# Examples:
+#   maxLogCache=10
+#
+
+maxLogCache=10
