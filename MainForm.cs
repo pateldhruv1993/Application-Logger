@@ -1,8 +1,8 @@
 ﻿using ApplicationLogger.Properties;
-using Microsoft.Win32;
 using System;
+using Microsoft.Win32;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.Text;
 using System.Windows.Forms;
 using System.Text.RegularExpressions;
@@ -16,15 +16,6 @@ namespace ApplicationLogger
 
     public partial class MainForm : Form
     {
-
-        /*
-         * TODO:
-         * . Count lines in UI?
-         * . Allow opening current log file in context menu
-         * . Allow app change ignoring on regex?
-         * . Create analyzer
-         * . ignore private windows? http://stackoverflow.com/questions/14132142/using-c-sharp-to-close-google-chrome-incognito-windows-only
-         */
 
         // Constants
         private const string SETTINGS_FIELD_RUN_AT_STARTUP = "RunAtStartup";
@@ -45,16 +36,12 @@ namespace ApplicationLogger
         private bool isRunning;
         private bool isUserIdle;
         private bool hasInitialized;
-        private string lastUserProcessId;
-        private string lastFileNameSaved;
-        private int lastDayLineLogged;
-        private DateTime lastTimeQueueWritten;
 
-        private string newUserProcessId;											// Temp
-        private StringBuilder lineToLog;											// Temp, used to create the line
+        											
+        
 
-        private DataManager dataMgr = new DataManager();
-
+        private ConfigManager configMgr = new ConfigManager();
+        private LoggingManager logMgr;
 
         //Variables for ICP with Node App
         TcpClient tcpclient;
@@ -120,14 +107,13 @@ namespace ApplicationLogger
 
 
             // Check the user is idle
-            if (SystemHelper.GetIdleTime() >= dataMgr.config.idleTime * 1000f)
+            if (SystemHelper.GetIdleTime() >= configMgr.config.idleTime * 1000f)
             {
                 if (!isUserIdle)
                 {
                     // User is now idle
                     isUserIdle = true;
-                    lastUserProcessId = null;
-                    logUserIdle();
+                    logMgr.logUserIdle();
                 }
             }
             else
@@ -142,19 +128,7 @@ namespace ApplicationLogger
             // Check the user process
             if (!isUserIdle)
             {
-                var process = getCurrentUserProcess();
-                if (process != null)
-                {
-                    // Valid process, create a unique id
-                    newUserProcessId = process.ProcessName + "_" + process.MainWindowTitle;
-
-                    if (lastUserProcessId != newUserProcessId)
-                    {
-                        // New process
-                        logUserProcess(process);
-                        lastUserProcessId = newUserProcessId;
-                    }
-                }
+                logMgr.checkForNewProcess();
             }
 
 
@@ -185,16 +159,8 @@ namespace ApplicationLogger
             }
 
 
-
-
-
-
-
             // Write to log if enough time passed
-            if (queuedLogMessages.Count > 0 && (DateTime.Now - lastTimeQueueWritten).TotalSeconds > configMaxQueueTime)
-            {
-                commitLines();
-            }
+            logMgr.checkIfShouldCommit();
         }
 
         private void onResize(object sender, EventArgs e)
@@ -229,8 +195,8 @@ namespace ApplicationLogger
 
         private void onMenuItemOpenLogClicked(object Sender, EventArgs e)
         {
-            commitLines();
-            Process.Start(getLogFileName());
+            logMgr.commitLines();
+            Process.Start(logMgr.getLogFileName());
         }
 
         private void onMenuItemRunAtStartupClicked(object Sender, EventArgs e)
@@ -260,18 +226,23 @@ namespace ApplicationLogger
 
             if (!hasInitialized)
             {
+
+                // Read configuration
+                configMgr.readConfiguration();
+
+                // Initialize logging manager class through its constructor
+                logMgr = new LoggingManager(configMgr, this);
+
+
+
                 allowClose = false;
                 isRunning = false;
-                queuedLogMessages = new List<string>();
-                lineToLog = new StringBuilder();
-                lastFileNameSaved = "";
                 allowShow = false;
 
                 // Force working folder
                 System.IO.Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
 
-                // Read configuration
-                dataMgr.readConfiguration();
+                
 
                 // Create context menu for the tray icon and update it
                 createContextMenu();
@@ -337,7 +308,7 @@ namespace ApplicationLogger
             updateContextMenu();
         }
 
-        private void updateContextMenu()
+        public void updateContextMenu()
         {
             // Update start/stop command
             if (menuItemStartStop != null)
@@ -355,7 +326,7 @@ namespace ApplicationLogger
             // Update filename
             if (menuItemOpenLog != null)
             {
-                var filename = getLogFileName();
+                var filename = logMgr.getLogFileName();
                 if (!System.IO.File.Exists(filename))
                 {
                     // Doesn't exist
@@ -394,17 +365,14 @@ namespace ApplicationLogger
                 // Initialize timer
                 timerCheck = new Timer();
                 timerCheck.Tick += new EventHandler(onTimer);
-                timerCheck.Interval = (int)(dataMgr.config.timeCheckInterval * 1000f);
+                timerCheck.Interval = (int)(configMgr.config.timeCheckInterval * 1000f);
                 timerCheck.Start();
-                lastUserProcessId = null;
-                lastTimeQueueWritten = DateTime.Now;
                 isRunning = true;
-                fixedSizeQueue = new FixedSizedQueue<string>(Int32.Parse(dataMgr.config.maxLogCache + ""));
+                logMgr.fixedSizeQueue = new FixedSizedQueue<string>(Int32.Parse(configMgr.config.maxLogCache + ""));
 
 
                 //Log system start (Not really. This just means app started. BUT as I plan to run it on startup, this should be good)
-                logLine("status::start");
-
+                logMgr.logLine("status::start");
 
 
 
@@ -413,7 +381,7 @@ namespace ApplicationLogger
                     tcpclient = new TcpClient();
                     Console.WriteLine("Connecting.....");
 
-                    tcpclient.Connect(dataMgr.config.serverAddress, Int32.Parse(dataMgr.config.serverPort + ""));
+                    tcpclient.Connect(configMgr.config.serverAddress, Int32.Parse(configMgr.config.serverPort + ""));
                     // use the ipaddress as in the server program
 
                     Console.WriteLine("Connected");
@@ -447,7 +415,7 @@ namespace ApplicationLogger
                 }
 
                 
-                logStop();
+                logMgr.logStop();
 
                 timerCheck.Stop();
                 timerCheck.Dispose();
@@ -462,7 +430,7 @@ namespace ApplicationLogger
             }
         }
 
-        private void updateText(string text)
+        public void updateText(string text)
         {
             labelApplication.Text = text;
         }
@@ -542,20 +510,6 @@ namespace ApplicationLogger
             return Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", writable);
         }
 
-        private Process getCurrentUserProcess()
-        {
-            // Find the process that's currently on top
-            var processes = Process.GetProcesses();
-            var foregroundWindowHandle = SystemHelper.GetForegroundWindow();
-
-            foreach (var process in processes)
-            {
-                if (process.Id <= 4) { continue; } // system processes
-                if (process.MainWindowHandle == foregroundWindowHandle) return process;
-            }
-
-            // Nothing found!
-            return null;
-        }
+        
     }
 }

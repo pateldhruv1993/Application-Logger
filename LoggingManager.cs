@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Collections.Concurrent;
@@ -8,37 +9,51 @@ namespace ApplicationLogger
 {
     class LoggingManager
     {
-        DataManager.configDataStruct config;
+        MainForm mainForm;
+        ConfigManager configMgr;
+
+
 
         private const string LINE_DIVIDER = "\t";
         private const string LINE_END = "\r\n";
-        private const string DATE_TIME_FORMAT = "o";							// 2008-06-15T21:15:07.0000000
-
-
-        private List<string> queuedLogMessages;
-        private FixedSizedQueue<string> fixedSizeQueue;
+        private const string DATE_TIME_FORMAT = "o";							            // 2008-06-15T21:15:07.0000000
 
 
 
-        public LoggingManager(DataManager.configDataStruct cfg)
+        private string lastUserProcessId = null;
+        private string newUserProcessId;
+        private int lastDayLineLogged;
+        private string lastFileNameSaved = "";
+        private DateTime lastTimeQueueWritten = DateTime.Now;
+
+
+        private StringBuilder lineToLog = new StringBuilder();								// Temp, used to create the line
+        public List<string> queuedLogMessages = new List<string>();
+        public FixedSizedQueue<string> fixedSizeQueue;
+
+
+
+        public LoggingManager(ConfigManager cM, MainForm main)
         {
-            config = cfg;
+            configMgr = cM;
+            mainForm = main;
         }
 
 
-        private void logUserIdle()
+        public void logUserIdle()
         {
             // Log that the user is idle
-            logLine("status::idle", true, false, config.idleTime ?? 0);
-            updateText("User idle");
+            logLine("status::idle", true, false, configMgr.config.idleTime ?? 0);
+            mainForm.updateText("User idle");
+            lastUserProcessId = null;
             newUserProcessId = null;
         }
 
-        private void logStop()
+        public void logStop()
         {
             // Log stopping the application
             logLine("status::stop", true);
-            updateText("Stopped");
+            mainForm.updateText("Stopped");
             newUserProcessId = null;
         }
 
@@ -49,7 +64,7 @@ namespace ApplicationLogger
             newUserProcessId = null;
         }
 
-        private void logUserProcess(Process process)
+        public void logUserProcess(Process process)
         {
             // Log the current user process
 
@@ -72,21 +87,21 @@ namespace ApplicationLogger
             try
             {
                 logLine("app::focus", process.ProcessName, process.MainModule.FileName, process.MainWindowTitle);
-                updateText("Name: " + process.ProcessName + ", " + process.MainWindowTitle);
+                mainForm.updateText("Name: " + process.ProcessName + ", " + process.MainWindowTitle);
             }
             catch (Exception exception)
             {
                 logLine("app::focus", process.ProcessName, "?", "?");
-                updateText("Name: " + process.ProcessName + ", ?");
+                mainForm.updateText("Name: " + process.ProcessName + ", ?");
             }
         }
 
-        private void logLine(string type, bool forceCommit = false, bool usePreviousDayFileName = false, float idleTimeOffsetSeconds = 0)
+        public void logLine(string type, bool forceCommit = false, bool usePreviousDayFileName = false, float idleTimeOffsetSeconds = 0)
         {
             logLine(type, "", "", "", forceCommit, usePreviousDayFileName, idleTimeOffsetSeconds);
         }
 
-        private void logLine(string type, string title, string location, string subject, bool forceCommit = false, bool usePreviousDayFileName = false, float idleTimeOffsetSeconds = 0)
+        public void logLine(string type, string title, string location, string subject, bool forceCommit = false, bool usePreviousDayFileName = false, float idleTimeOffsetSeconds = 0)
         {
             // Log a single line
             DateTime now = DateTime.Now;
@@ -114,7 +129,7 @@ namespace ApplicationLogger
 
             lastDayLineLogged = DateTime.Now.Day;
 
-            if (queuedLogMessages.Count > config.maxQueueEntries || forceCommit)
+            if (queuedLogMessages.Count > configMgr.config.maxQueueEntries || forceCommit)
             {
                 if (usePreviousDayFileName)
                 {
@@ -127,7 +142,7 @@ namespace ApplicationLogger
             }
         }
 
-        private void commitLines(string fileName = null)
+        public void commitLines(string fileName = null)
         {
             // Commit all currently queued lines to the file
 
@@ -166,16 +181,16 @@ namespace ApplicationLogger
 
                 lastTimeQueueWritten = DateTime.Now;
 
-                updateContextMenu();
+                mainForm.updateContextMenu();
             }
         }
 
 
-        private string getLogFileName()
+        public string getLogFileName()
         {
             // Get the log filename for something to be logged now
             var now = DateTime.Now;
-            var filename = config.processPath;
+            var filename = configMgr.config.processPath;
 
             // Replaces variables
             filename = filename.Replace("[[month]]", now.ToString("MM"));
@@ -194,6 +209,54 @@ namespace ApplicationLogger
 
             return (pathOnly.Length > 0 ? pathOnly + "\\" : "") + fileOnly;
         }
+
+
+
+
+        public void checkForNewProcess()
+        {
+            var process = getCurrentUserProcess();
+            if (process != null)
+            {
+                // Valid process, create a unique id
+                newUserProcessId = process.ProcessName + "_" + process.MainWindowTitle;
+
+                if (lastUserProcessId != newUserProcessId)
+                {
+                    // New process
+                    logUserProcess(process);
+                    lastUserProcessId = newUserProcessId;
+                }
+            }
+        }
+
+
+
+        private Process getCurrentUserProcess()
+        {
+            // Find the process that's currently on top
+            var processes = Process.GetProcesses();
+            var foregroundWindowHandle = SystemHelper.GetForegroundWindow();
+
+            foreach (var process in processes)
+            {
+                if (process.Id <= 4) { continue; } // system processes
+                if (process.MainWindowHandle == foregroundWindowHandle) return process;
+            }
+
+            // Nothing found!
+            return null;
+        }
+
+
+        public void checkIfShouldCommit(){
+            if (queuedLogMessages.Count > 0 && (DateTime.Now - lastTimeQueueWritten).TotalSeconds > configMgr.config.maxQueueTime)
+            {
+                commitLines();
+            }
+        }
+
+
     }
 
 

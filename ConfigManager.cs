@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace ApplicationLogger
 {
-    class DataManager
+    class ConfigManager
     {
 
         private const string CONFIG_FILE = "ApplicationLogger.cfg";
