@@ -47,8 +47,8 @@ namespace ApplicationLogger
         TcpClient tcpclient;
         Stream stm;
         ASCIIEncoding asen = new ASCIIEncoding();
-
-
+        bool isConnectedIPCServer = false;
+        int IPCSkipCount = 0;
 
         // ================================================================================================================
         // CONSTRUCTOR ----------------------------------------------------------------------------------------------------
@@ -104,8 +104,6 @@ namespace ApplicationLogger
             // Timer tick: check for the current application
 
 
-
-
             // Check the user is idle
             if (SystemHelper.GetIdleTime() >= configMgr.config.idleTime * 1000f)
             {
@@ -135,29 +133,50 @@ namespace ApplicationLogger
 
 
 
-
             //TCP Client Stuff
-            try
+            if (IPCSkipCount >= 3)//configMgr.config.TCPInterval)
             {
-
-                byte[] bb = new byte[100];
-                int k = stm.Read(bb, 0, 100);
-
-                if (k != 0 || k != null)
+                if (isConnectedIPCServer)
                 {
-                    String receivedData = System.Text.Encoding.Default.GetString(bb);
+                    connectedToIPCLabel.Text = "Connected to IPC: TRUE";
+                    try
+                    {
+
+                        byte[] bb = new byte[100];
+                        int k = stm.Read(bb, 0, 100);
+
+                        if (k != 0 || k != null)
+                        {
+                            String receivedData = System.Text.Encoding.Default.GetString(bb);
 
 
 
-                    byte[] ba = asen.GetBytes("Say it don't spray it Ron.");
-                    stm.Write(ba, 0, ba.Length);
+                            byte[] ba = asen.GetBytes("Say it don't spray it Ron.");
+                            stm.Write(ba, 0, ba.Length);
+                        }
+                        isConnectedIPCServer = true;
+                    }
+                    catch (Exception excep)
+                    {
+                        Console.WriteLine("Error..... " + excep.StackTrace);
+
+                        //May be you got disconnected??
+                        isConnectedIPCServer = false;
+                    }
                 }
-            }
-            catch (Exception excep)
-            {
-                Console.WriteLine("Error..... " + excep.StackTrace);
-            }
+                else
+                {
+                    connectedToIPCLabel.Text = "Connected to IPC: FALSE";
+                    connectToIPCServer();
+                }
 
+                IPCSkipCount = 0;
+
+            }
+            else
+            {
+                IPCSkipCount++;
+            }
 
             // Write to log if enough time passed
             logMgr.checkIfShouldCommit();
@@ -375,23 +394,8 @@ namespace ApplicationLogger
                 logMgr.logLine("status::start");
 
 
-
-                try
-                {
-                    tcpclient = new TcpClient();
-                    Console.WriteLine("Connecting.....");
-
-                    tcpclient.Connect(configMgr.config.serverAddress, Int32.Parse(configMgr.config.serverPort + ""));
-                    // use the ipaddress as in the server program
-
-                    Console.WriteLine("Connected");
-                    stm = tcpclient.GetStream();
-
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("Error..... " + e.StackTrace);
-                }
+                connectToIPCServer();
+                
 
 
                 updateContextMenu();
@@ -432,7 +436,8 @@ namespace ApplicationLogger
 
         public void updateText(string text)
         {
-            labelApplication.Text = text;
+            labelApplication.Text = "Current App: " + text;
+            debugLogTextBox.AppendText(text + "\n");
         }
 
         private void applySettingsRunAtStartup()
@@ -510,6 +515,26 @@ namespace ApplicationLogger
             return Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", writable);
         }
 
+
+        private void connectToIPCServer()
+        {
+            try
+            {
+                tcpclient = new TcpClient();
+                Console.WriteLine("Connecting.....");
+
+                tcpclient.Connect(configMgr.config.serverAddress, Int32.Parse(configMgr.config.serverPort + ""));
+                // use the ipaddress as in the server program
+
+                Console.WriteLine("Connected");
+                stm = tcpclient.GetStream();
+                isConnectedIPCServer = true;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error..... " + e.StackTrace);
+            }
+        }
         
     }
 }

@@ -87,12 +87,12 @@ namespace ApplicationLogger
             try
             {
                 logLine("app::focus", process.ProcessName, process.MainModule.FileName, process.MainWindowTitle);
-                mainForm.updateText("Name: " + process.ProcessName + ", " + process.MainWindowTitle);
+                mainForm.updateText(process.ProcessName + ", " + process.MainWindowTitle);
             }
             catch (Exception exception)
             {
                 logLine("app::focus", process.ProcessName, "?", "?");
-                mainForm.updateText("Name: " + process.ProcessName + ", ?");
+                mainForm.updateText(process.ProcessName + ", ?");
             }
         }
 
