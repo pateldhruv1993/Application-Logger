@@ -1,11 +1,15 @@
 ﻿FEATURES:
 
 - (?) Make the log be in json
-- Add up focus time (may be store it in an array so that we know when user alt+tabbed out of it and then got back in again AND as total focus time) 
+- Add functionality so that the app does not consider user idle if he is watching a video or something for mroe than 10 mins.
+	NOTE: You could find out how windows figures out that user is on a full screen app and hence doesnt put the computer to sleep.
+- Add up focus time (may be store it in an array so that we know when user alt+tabbed out of it and then got back in again AND as total focus time)
 	each time the app runs to get total window focus time and inactive time.
 - Find a way to log "app::started" and "app:stop" for other Apps
 	NOTE: Inside getCurrentUserProcess() in LoggingManager.cs you get a list of all the processes. You can use that list to add each process to another list whenever an app comes to focus for the first time.
 	And then check if that process ID still exists in the Systems processes list on each tick
+	DIARY: Looks like its done but needs a bit of testing. Also need to find a way to log app::ended. Currently as we know which PID ended because we maintain a list of those but we also need to relate that
+		to the process logged in the file.
 - Make reading from tcp stream less frequent (save POWAH)
 	NOTE: Even though there is some basic stuff in the code that makes reading stream less frequent; you might want to remove that stuff in case you make the app multithreaded... or not if you still wanna skip
 			cycles

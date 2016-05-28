@@ -21,7 +21,6 @@ namespace ApplicationLogger
         private const string SETTINGS_FIELD_RUN_AT_STARTUP = "RunAtStartup";
         private const string REGISTRY_KEY_ID = "ApplicationLogger";					// Registry app key for when it's running at startup
 
-        
 
         // Properties
         private Timer timerCheck;
@@ -35,23 +34,19 @@ namespace ApplicationLogger
         private bool allowShow;
         private bool isRunning;
         private bool isUserIdle;
-        private bool hasInitialized;
-
-        											
+        private bool hasInitialized;		
         
 
         private ConfigManager configMgr = new ConfigManager();
         private LoggingManager logMgr;
 
-        //Variables for ICP with Node App
+        //Variables for ICP
         TcpClient tcpclient;
         Stream stm;
         ASCIIEncoding asen = new ASCIIEncoding();
         bool isConnectedIPCServer = false;
         int IPCSkipCount = 0;
 
-        // ================================================================================================================
-        // CONSTRUCTOR ----------------------------------------------------------------------------------------------------
 
         public MainForm()
         {
@@ -59,9 +54,6 @@ namespace ApplicationLogger
             initializeForm();
         }
 
-
-        // ================================================================================================================
-        // EVENT INTERFACE ------------------------------------------------------------------------------------------------
 
         private void onFormLoad(object sender, EventArgs e)
         {
@@ -128,8 +120,6 @@ namespace ApplicationLogger
             {
                 logMgr.checkForNewProcess();
             }
-
-
 
 
 
@@ -236,9 +226,6 @@ namespace ApplicationLogger
         }
 
 
-        // ================================================================================================================
-        // INTERNAL INTERFACE ---------------------------------------------------------------------------------------------
-
         private void initializeForm()
         {
             // Initialize
@@ -253,7 +240,6 @@ namespace ApplicationLogger
                 logMgr = new LoggingManager(configMgr, this);
 
 
-
                 allowClose = false;
                 isRunning = false;
                 allowShow = false;
@@ -261,7 +247,6 @@ namespace ApplicationLogger
                 // Force working folder
                 System.IO.Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
 
-                
 
                 // Create context menu for the tray icon and update it
                 createContextMenu();
@@ -424,7 +409,6 @@ namespace ApplicationLogger
                 timerCheck.Stop();
                 timerCheck.Dispose();
                 timerCheck = null;
-
                 isRunning = false;
 
                 updateContextMenu();
@@ -468,10 +452,7 @@ namespace ApplicationLogger
             Close();
         }
 
-
-        // ================================================================================================================
-        // ACCESSOR INTERFACE ---------------------------------------------------------------------------------------------
-
+        
         private bool settingsRunAtStartup
         {
             // Whether the settings say the app should run at startup or not

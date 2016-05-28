@@ -30,6 +30,7 @@ namespace ApplicationLogger
         private StringBuilder lineToLog = new StringBuilder();								// Temp, used to create the line
         public List<string> queuedLogMessages = new List<string>();
         public FixedSizedQueue<string> fixedSizeQueue;
+        public List<int> userProcesses = new List<int>();
 
 
 
@@ -64,7 +65,7 @@ namespace ApplicationLogger
             newUserProcessId = null;
         }
 
-        public void logUserProcess(Process process)
+        public void logUserProcess(Process process, String status = "app::focus")
         {
             // Log the current user process
 
@@ -86,12 +87,12 @@ namespace ApplicationLogger
 
             try
             {
-                logLine("app::focus", process.ProcessName, process.MainModule.FileName, process.MainWindowTitle);
+                logLine(status, process.ProcessName, process.MainModule.FileName, process.MainWindowTitle);
                 mainForm.updateText(process.ProcessName + ", " + process.MainWindowTitle);
             }
             catch (Exception exception)
             {
-                logLine("app::focus", process.ProcessName, "?", "?");
+                logLine(status, process.ProcessName, "?", "?");
                 mainForm.updateText(process.ProcessName + ", ?");
             }
         }
@@ -223,8 +224,17 @@ namespace ApplicationLogger
 
                 if (lastUserProcessId != newUserProcessId)
                 {
+
+                    if (!userProcesses.Contains(process.Id))
+                    {
+                        userProcesses.Add(process.Id);
+                    }
+
+
                     // New process
                     logUserProcess(process);
+
+                    
                     lastUserProcessId = newUserProcessId;
                 }
             }
@@ -237,15 +247,101 @@ namespace ApplicationLogger
             // Find the process that's currently on top
             var processes = Process.GetProcesses();
             var foregroundWindowHandle = SystemHelper.GetForegroundWindow();
+            Process process = null;
+            int count = 0;
+            
 
-            foreach (var process in processes)
+            do{
+                bool doesUserProcessExist = false;
+
+                foreach (var proc in processes)
+                {
+
+                    // ONLY RUN IF THIS IS THE FIRST TIME userProcesses foreach LOOP IS LOOPING
+                    if (count == 0)
+                    {
+                        if (proc.Id <= 4) { continue; } // system processes
+
+                        if (proc.MainWindowHandle == foregroundWindowHandle)
+                        {
+                            process = proc;
+                        }
+                    }
+
+
+
+                    // RUN THIS PART ALL THE TIME
+                    if (!doesUserProcessExist && userProcesses.Count > 0 && userProcesses[count] == proc.Id)
+                    {
+                        doesUserProcessExist = true;
+                    }
+
+                }
+
+
+                if (userProcesses.Count > 0 && !doesUserProcessExist)
+                {
+                    userProcesses.RemoveAt(count);
+                
+                }
+
+                count++;
+
+            } while(count < userProcesses.Count);
+
+
+
+
+
+            /*
+            foreach (int userProcessID in userProcesses)
             {
-                if (process.Id <= 4) { continue; } // system processes
-                if (process.MainWindowHandle == foregroundWindowHandle) return process;
-            }
 
+                bool doesUserProcessExist = false;
+
+                foreach (var proc in processes)
+                {
+                    
+                    //ONLY RUN IF THIS IS THE FIRST TIME userProcesses foreach LOOP IS LOOPING
+                    if (firstTime)
+                    {
+                        if (proc.Id <= 4) { continue; } // system processes
+
+                        if (proc.MainWindowHandle == foregroundWindowHandle)
+                        {
+                            if (!userProcesses.Contains(proc.Id))
+                            {
+                                userProcesses.Add(proc.Id);
+                            }
+                            process = proc;
+                        }
+
+                        firstTime = false;
+                    }
+
+
+
+                    //RUN THIS PART ALL THE TIME
+                    if (!doesUserProcessExist && userProcessID == proc.Id)
+                    {
+                        doesUserProcessExist = true;
+                    }
+
+                }
+
+                if (!doesUserProcessExist)
+                {
+                    while (userProcesses.Contains(userProcessID))
+                    {
+                        userProcesses.Remove(userProcessID);
+                    }
+                }
+
+            }
+            
+            */
             // Nothing found!
-            return null;
+            return process;
         }
 
 
@@ -258,6 +354,7 @@ namespace ApplicationLogger
 
 
     }
+
 
 
 
