@@ -26,11 +26,11 @@
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.connectedToIPCLabel = new System.Windows.Forms.Label();
+            this.label1 = new System.Windows.Forms.Label();
+            this.debugLogTextBox = new System.Windows.Forms.TextBox();
             this.labelApplication = new System.Windows.Forms.Label();
             this.notifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
-            this.debugLogTextBox = new System.Windows.Forms.TextBox();
-            this.label1 = new System.Windows.Forms.Label();
-            this.connectedToIPCLabel = new System.Windows.Forms.Label();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -42,10 +42,38 @@
             this.groupBox1.Controls.Add(this.labelApplication);
             this.groupBox1.Location = new System.Drawing.Point(12, 12);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(461, 241);
+            this.groupBox1.Size = new System.Drawing.Size(702, 241);
             this.groupBox1.TabIndex = 3;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Application information";
+            // 
+            // connectedToIPCLabel
+            // 
+            this.connectedToIPCLabel.AutoSize = true;
+            this.connectedToIPCLabel.Location = new System.Drawing.Point(8, 35);
+            this.connectedToIPCLabel.Name = "connectedToIPCLabel";
+            this.connectedToIPCLabel.Size = new System.Drawing.Size(97, 13);
+            this.connectedToIPCLabel.TabIndex = 3;
+            this.connectedToIPCLabel.Text = "Connected to IPC: ";
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(8, 48);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(25, 13);
+            this.label1.TabIndex = 2;
+            this.label1.Text = "Log";
+            // 
+            // debugLogTextBox
+            // 
+            this.debugLogTextBox.Location = new System.Drawing.Point(11, 64);
+            this.debugLogTextBox.Multiline = true;
+            this.debugLogTextBox.Name = "debugLogTextBox";
+            this.debugLogTextBox.ReadOnly = true;
+            this.debugLogTextBox.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.debugLogTextBox.Size = new System.Drawing.Size(685, 171);
+            this.debugLogTextBox.TabIndex = 1;
             // 
             // labelApplication
             // 
@@ -62,39 +90,11 @@
             this.notifyIcon.Visible = true;
             this.notifyIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.onDoubleClickNotificationIcon);
             // 
-            // debugLogTextBox
-            // 
-            this.debugLogTextBox.Location = new System.Drawing.Point(11, 64);
-            this.debugLogTextBox.Multiline = true;
-            this.debugLogTextBox.Name = "debugLogTextBox";
-            this.debugLogTextBox.ReadOnly = true;
-            this.debugLogTextBox.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.debugLogTextBox.Size = new System.Drawing.Size(444, 171);
-            this.debugLogTextBox.TabIndex = 1;
-            // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(8, 48);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(25, 13);
-            this.label1.TabIndex = 2;
-            this.label1.Text = "Log";
-            // 
-            // connectedToIPCLabel
-            // 
-            this.connectedToIPCLabel.AutoSize = true;
-            this.connectedToIPCLabel.Location = new System.Drawing.Point(8, 35);
-            this.connectedToIPCLabel.Name = "connectedToIPCLabel";
-            this.connectedToIPCLabel.Size = new System.Drawing.Size(97, 13);
-            this.connectedToIPCLabel.TabIndex = 3;
-            this.connectedToIPCLabel.Text = "Connected to IPC: ";
-            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(485, 265);
+            this.ClientSize = new System.Drawing.Size(726, 265);
             this.Controls.Add(this.groupBox1);
             this.MaximizeBox = false;
             this.MinimizeBox = false;

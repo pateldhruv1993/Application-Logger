@@ -30,7 +30,7 @@ namespace ApplicationLogger
         private StringBuilder lineToLog = new StringBuilder();								// Temp, used to create the line
         public List<string> queuedLogMessages = new List<string>();
         public FixedSizedQueue<string> fixedSizeQueue;
-        public List<int> userProcesses = new List<int>();
+        public List<Process> userProcesses = new List<Process>();
 
 
 
@@ -87,22 +87,22 @@ namespace ApplicationLogger
 
             try
             {
-                logLine(status, process.ProcessName, process.MainModule.FileName, process.MainWindowTitle);
-                mainForm.updateText(process.ProcessName + ", " + process.MainWindowTitle);
+                logLine(status, (process.Id + ""), process.ProcessName, process.MainModule.FileName, process.MainWindowTitle);
+                mainForm.updateText(process.Id + "\t" + status + "\t" + process.ProcessName + ", " + process.MainWindowTitle);
             }
             catch (Exception exception)
             {
-                logLine(status, process.ProcessName, "?", "?");
-                mainForm.updateText(process.ProcessName + ", ?");
+                logLine(status, (process.Id +""), process.ProcessName, "?", "?");
+                mainForm.updateText(process.Id + "\t" + status + "\t" + process.ProcessName + ", ?");
             }
         }
 
         public void logLine(string type, bool forceCommit = false, bool usePreviousDayFileName = false, float idleTimeOffsetSeconds = 0)
         {
-            logLine(type, "", "", "", forceCommit, usePreviousDayFileName, idleTimeOffsetSeconds);
+            logLine(type, "", "", "", "", forceCommit, usePreviousDayFileName, idleTimeOffsetSeconds);
         }
 
-        public void logLine(string type, string title, string location, string subject, bool forceCommit = false, bool usePreviousDayFileName = false, float idleTimeOffsetSeconds = 0)
+        public void logLine(string type, string pID, string title, string location, string subject, bool forceCommit = false, bool usePreviousDayFileName = false, float idleTimeOffsetSeconds = 0)
         {
             // Log a single line
             DateTime now = DateTime.Now;
@@ -112,7 +112,9 @@ namespace ApplicationLogger
             lineToLog.Clear();
             lineToLog.Append(now.ToString(DATE_TIME_FORMAT));
             lineToLog.Append(LINE_DIVIDER);
-            lineToLog.Append(type);
+            lineToLog.Append(type); 
+            lineToLog.Append(LINE_DIVIDER);
+            lineToLog.Append(pID);
             lineToLog.Append(LINE_DIVIDER);
             lineToLog.Append(Environment.MachineName);
             lineToLog.Append(LINE_DIVIDER);
@@ -217,6 +219,7 @@ namespace ApplicationLogger
         public void checkForNewProcess()
         {
             var process = getCurrentUserProcess();
+            bool addedToUserProcessesList = false;
             if (process != null)
             {
                 // Valid process, create a unique id
@@ -224,15 +227,19 @@ namespace ApplicationLogger
 
                 if (lastUserProcessId != newUserProcessId)
                 {
-
-                    if (!userProcesses.Contains(process.Id))
+                    var processInList = userProcesses.FindIndex(p => p.Id == process.Id);
+                    if (processInList < 0)
                     {
-                        userProcesses.Add(process.Id);
+                        userProcesses.Add(process);
+                        logUserProcess(process, "app::started");
+                        addedToUserProcessesList = true;
                     }
 
-
-                    // New process
-                    logUserProcess(process);
+                    if (!addedToUserProcessesList)
+                    {
+                        // App came in focus
+                        logUserProcess(process);
+                    }
 
                     
                     lastUserProcessId = newUserProcessId;
@@ -254,9 +261,8 @@ namespace ApplicationLogger
             do{
                 bool doesUserProcessExist = false;
 
-                foreach (var proc in processes)
+                foreach (Process proc in processes)
                 {
-
                     // ONLY RUN IF THIS IS THE FIRST TIME userProcesses foreach LOOP IS LOOPING
                     if (count == 0)
                     {
@@ -271,7 +277,7 @@ namespace ApplicationLogger
 
 
                     // RUN THIS PART ALL THE TIME
-                    if (!doesUserProcessExist && userProcesses.Count > 0 && userProcesses[count] == proc.Id)
+                    if (!doesUserProcessExist && userProcesses.Count > 0 && userProcesses[count].Id == proc.Id)
                     {
                         doesUserProcessExist = true;
                     }
@@ -281,8 +287,8 @@ namespace ApplicationLogger
 
                 if (userProcesses.Count > 0 && !doesUserProcessExist)
                 {
+                    logUserProcess(userProcesses[count], "app::stopped");
                     userProcesses.RemoveAt(count);
-                
                 }
 
                 count++;
@@ -290,56 +296,6 @@ namespace ApplicationLogger
             } while(count < userProcesses.Count);
 
 
-
-
-
-            /*
-            foreach (int userProcessID in userProcesses)
-            {
-
-                bool doesUserProcessExist = false;
-
-                foreach (var proc in processes)
-                {
-                    
-                    //ONLY RUN IF THIS IS THE FIRST TIME userProcesses foreach LOOP IS LOOPING
-                    if (firstTime)
-                    {
-                        if (proc.Id <= 4) { continue; } // system processes
-
-                        if (proc.MainWindowHandle == foregroundWindowHandle)
-                        {
-                            if (!userProcesses.Contains(proc.Id))
-                            {
-                                userProcesses.Add(proc.Id);
-                            }
-                            process = proc;
-                        }
-
-                        firstTime = false;
-                    }
-
-
-
-                    //RUN THIS PART ALL THE TIME
-                    if (!doesUserProcessExist && userProcessID == proc.Id)
-                    {
-                        doesUserProcessExist = true;
-                    }
-
-                }
-
-                if (!doesUserProcessExist)
-                {
-                    while (userProcesses.Contains(userProcessID))
-                    {
-                        userProcesses.Remove(userProcessID);
-                    }
-                }
-
-            }
-            
-            */
             // Nothing found!
             return process;
         }

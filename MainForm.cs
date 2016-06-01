@@ -135,7 +135,7 @@ namespace ApplicationLogger
                         byte[] bb = new byte[100];
                         int k = stm.Read(bb, 0, 100);
 
-                        if (k != 0 || k != null)
+                        if (k != 0)
                         {
                             String receivedData = System.Text.Encoding.Default.GetString(bb);
 
