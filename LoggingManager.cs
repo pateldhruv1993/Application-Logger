@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Collections.Concurrent;
+using System.Management;
+using Microsoft.WindowsAPICodePack.ApplicationServices;
 
 namespace ApplicationLogger
 {
@@ -38,7 +40,95 @@ namespace ApplicationLogger
         {
             configMgr = cM;
             mainForm = main;
+            InitPowerEvents();
+            PowerManager.IsMonitorOnChanged += new EventHandler(MonitorOnChanged);
         }
+
+
+
+
+
+
+
+        void MonitorOnChanged(object sender, EventArgs e)
+        {
+            mainForm.updateText("Monitor Status Changed:" + PowerManager.IsMonitorOn);
+
+            /*settings.MonitorOn = PowerManager.IsMonitorOn;
+            AddEventMessage(string.Format("Monitor status changed (new status: {0})", PowerManager.IsMonitorOn ? "On" : "Off"));*/
+        }
+
+
+
+
+
+        private ManagementEventWatcher managementEventWatcher;
+        private readonly Dictionary<string, string> powerValues = new Dictionary<string, string>
+                         {
+                             {"4", "Entering Suspend"},
+                             {"7", "Resume from Suspend"},
+                             {"10", "Power Status Change"},
+                             {"11", "OEM Event"},
+                             {"18", "Resume Automatic"}
+                         };
+        public void InitPowerEvents()
+        {
+            var q = new WqlEventQuery();
+            var scope = new ManagementScope("root\\CIMV2");
+
+            q.EventClassName = "Win32_PowerManagementEvent";
+            managementEventWatcher = new ManagementEventWatcher(scope, q);
+            managementEventWatcher.EventArrived += PowerEventArrive;
+            managementEventWatcher.Start();
+        }
+        private void PowerEventArrive(object sender, EventArrivedEventArgs e)
+        {
+            foreach (PropertyData pd in e.NewEvent.Properties)
+            {
+                if (pd == null || pd.Value == null) continue;
+                var name = powerValues.ContainsKey(pd.Value.ToString())
+                               ? powerValues[pd.Value.ToString()]
+                               : pd.Value.ToString();
+                mainForm.updateText("PowerEvent:" + name);
+            }
+        }
+        public void Stop()
+        {
+            managementEventWatcher.Stop();
+        }
+
+
+
+
+
+        /*
+
+        public bool getMonitorState()
+        {
+
+            bool active = true;
+            var query = "select * from WmiMonitorBasicDisplayParams";
+            using (var wmiSearcher = new ManagementObjectSearcher("\\root\\wmi", query))
+            {
+                var results = wmiSearcher.Get();
+                foreach (ManagementObject wmiObj in results)
+                {
+                    // get the "Active" property and cast to a boolean, which should 
+                    // tell us if the display is active. I've interpreted this to mean "on"
+                    active = (Boolean)wmiObj["Active"];
+                }
+            }
+
+            return active;
+
+        }*/
+
+
+
+
+
+
+
 
 
         public void logUserIdle()
@@ -307,6 +397,9 @@ namespace ApplicationLogger
                 commitLines();
             }
         }
+
+
+
 
 
     }

@@ -30,4 +30,4 @@ FEATURES:
 CHECK LIST FOR RELEASE:
 
 - Organize code and move some of it to the new DataManger.cs
-- Turn "Run on Startup" to TRUE in App.config  
+- Turn "Run on Startup" to TRUE in App.config

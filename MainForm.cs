@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 
 
 namespace ApplicationLogger
@@ -46,6 +47,18 @@ namespace ApplicationLogger
         ASCIIEncoding asen = new ASCIIEncoding();
         bool isConnectedIPCServer = false;
         int IPCSkipCount = 0;
+
+
+
+
+
+
+
+        delegate void SetTextCallback(string text);
+
+
+
+
 
 
         public MainForm()
@@ -90,11 +103,13 @@ namespace ApplicationLogger
             // If debugging, un-hook itself from startup
             if (System.Diagnostics.Debugger.IsAttached && windowsRunAtStartup) windowsRunAtStartup = false;
         }
-
+        
         private void onTimer(object sender, EventArgs e)
         {
             // Timer tick: check for the current application
-
+            updateText("Monitor State");
+            
+            
 
             // Check the user is idle
             if (SystemHelper.GetIdleTime() >= configMgr.config.idleTime * 1000f)
@@ -418,10 +433,28 @@ namespace ApplicationLogger
             }
         }
 
+
+
+
         public void updateText(string text)
         {
-            labelApplication.Text = "Current App: " + text;
-            debugLogTextBox.AppendText(text + "\n");
+
+
+            // InvokeRequired required compares the thread ID of the
+            // calling thread to the thread ID of the creating thread.
+            // If these threads are different, it returns true.
+            if (this.labelApplication.InvokeRequired)
+            {
+                SetTextCallback d = new SetTextCallback(updateText);
+                this.Invoke(d, new object[] { text });
+            }
+            else
+            {
+                labelApplication.Text = "Current App: " + text;
+                debugLogTextBox.AppendText(text + "\n");
+            }
+
+            
         }
 
         private void applySettingsRunAtStartup()
@@ -450,6 +483,7 @@ namespace ApplicationLogger
         {
             allowClose = true;
             Close();
+            logMgr.Stop();
         }
 
         
