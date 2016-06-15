@@ -5,12 +5,12 @@
 FEATURES:
 
 - (?) Make the log be in json
-- Find a way to log something similar to app::started and app::stopped for chrome tabs
+- Find a way to log something similar to app::started and app::stopped for chrome tabs (Trying to make chrome extension for this)
 - Add functionality so that the app does not consider user idle if he is watching a video or something for mroe than 10 mins.
 	NOTE: You could find out how windows figures out that user is on a full screen app and hence doesnt put the computer to sleep.
 	http://stackoverflow.com/questions/2208595/c-sharp-how-to-get-the-events-when-the-screen-display-goes-to-power-off-or-on
 - Add up focus time (may be store it in an array so that we know when user alt+tabbed out of it and then got back in again AND as total focus time)
-	each time the app runs to get total window focus time and inactive time.
+	each time the app runs to get total window focus time and inactive time. (This should probably be in the pre-processing stuff)
 - Have an initial handshake between TCP server and yourself so that you don't read some other apps data
 - Make stuff multithreaded if you care about the lag while dragging, resizing etc..
 	NOTE: The IPC/TCP code inside onTimer() produces more lag than the fact that we have a timer on main thread of the app. So you might want to process atleast the IPC stuff on thread

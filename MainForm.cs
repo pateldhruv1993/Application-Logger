@@ -52,10 +52,7 @@ namespace ApplicationLogger
 
 
 
-
-
         delegate void SetTextCallback(string text);
-
 
 
 
@@ -107,12 +104,12 @@ namespace ApplicationLogger
         private void onTimer(object sender, EventArgs e)
         {
             // Timer tick: check for the current application
-            updateText("Monitor State");
             
             
 
             // Check the user is idle
-            if (SystemHelper.GetIdleTime() >= configMgr.config.idleTime * 1000f)
+            //if (SystemHelper.GetIdleTime() >= configMgr.config.idleTime * 1000f)
+            if()
             {
                 if (!isUserIdle)
                 {
@@ -137,7 +134,6 @@ namespace ApplicationLogger
             }
 
 
-
             //TCP Client Stuff
             if (IPCSkipCount >= 3)//configMgr.config.TCPInterval)
             {
@@ -149,13 +145,9 @@ namespace ApplicationLogger
 
                         byte[] bb = new byte[100];
                         int k = stm.Read(bb, 0, 100);
-
                         if (k != 0)
                         {
                             String receivedData = System.Text.Encoding.Default.GetString(bb);
-
-
-
                             byte[] ba = asen.GetBytes("Say it don't spray it Ron.");
                             stm.Write(ba, 0, ba.Length);
                         }
@@ -387,7 +379,7 @@ namespace ApplicationLogger
                 timerCheck.Interval = (int)(configMgr.config.timeCheckInterval * 1000f);
                 timerCheck.Start();
                 isRunning = true;
-                logMgr.fixedSizeQueue = new FixedSizedQueue<string>(Int32.Parse(configMgr.config.maxLogCache + ""));
+                logMgr.fixedSizeLogQueue = new FixedSizedQueue<string>(Int32.Parse(configMgr.config.maxLogCache + ""));
 
 
                 //Log system start (Not really. This just means app started. BUT as I plan to run it on startup, this should be good)
@@ -429,12 +421,15 @@ namespace ApplicationLogger
                 updateContextMenu();
                 updateTrayIcon();
 
-
             }
         }
 
 
 
+        // Lable to show if there is any windows focused currently - TEMP. Should probably remove it from the final version as it barely gives any important info
+        public void changeFocusDebug(string text) {
+            focusDebug.Text = "Focused Window:" + text;
+        }
 
         public void updateText(string text)
         {
@@ -549,6 +544,13 @@ namespace ApplicationLogger
             {
                 Console.WriteLine("Error..... " + e.StackTrace);
             }
+        }
+
+
+
+        public void setIdle(bool userIdle)
+        {
+            isUserIdle = userIdle;
         }
         
     }

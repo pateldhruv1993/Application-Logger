@@ -31,11 +31,13 @@
             this.debugLogTextBox = new System.Windows.Forms.TextBox();
             this.labelApplication = new System.Windows.Forms.Label();
             this.notifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
+            this.focusDebug = new System.Windows.Forms.Label();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.focusDebug);
             this.groupBox1.Controls.Add(this.connectedToIPCLabel);
             this.groupBox1.Controls.Add(this.label1);
             this.groupBox1.Controls.Add(this.debugLogTextBox);
@@ -90,6 +92,15 @@
             this.notifyIcon.Visible = true;
             this.notifyIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.onDoubleClickNotificationIcon);
             // 
+            // focusDebug
+            // 
+            this.focusDebug.AutoSize = true;
+            this.focusDebug.Location = new System.Drawing.Point(319, 35);
+            this.focusDebug.Name = "focusDebug";
+            this.focusDebug.Size = new System.Drawing.Size(98, 13);
+            this.focusDebug.TabIndex = 4;
+            this.focusDebug.Text = "Currently Focused: ";
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -119,6 +130,7 @@
         private System.Windows.Forms.TextBox debugLogTextBox;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label connectedToIPCLabel;
+        private System.Windows.Forms.Label focusDebug;
 	}
 }
 

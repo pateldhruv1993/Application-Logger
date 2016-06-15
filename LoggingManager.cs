@@ -14,8 +14,6 @@ namespace ApplicationLogger
         MainForm mainForm;
         ConfigManager configMgr;
 
-
-
         private const string LINE_DIVIDER = "\t";
         private const string LINE_END = "\r\n";
         private const string DATE_TIME_FORMAT = "o";							            // 2008-06-15T21:15:07.0000000
@@ -31,7 +29,7 @@ namespace ApplicationLogger
 
         private StringBuilder lineToLog = new StringBuilder();								// Temp, used to create the line
         public List<string> queuedLogMessages = new List<string>();
-        public FixedSizedQueue<string> fixedSizeQueue;
+        public FixedSizedQueue<string> fixedSizeLogQueue;
         public List<Process> userProcesses = new List<Process>();
 
 
@@ -47,13 +45,17 @@ namespace ApplicationLogger
 
 
 
-
-
-
         void MonitorOnChanged(object sender, EventArgs e)
         {
             mainForm.updateText("Monitor Status Changed:" + PowerManager.IsMonitorOn);
-
+            if (PowerManager.IsMonitorOn)
+            {
+                mainForm.setIdle(false);
+            }
+            else
+            {
+                mainForm.setIdle(true);
+            }
             /*settings.MonitorOn = PowerManager.IsMonitorOn;
             AddEventMessage(string.Format("Monitor status changed (new status: {0})", PowerManager.IsMonitorOn ? "On" : "Off"));*/
         }
@@ -90,6 +92,15 @@ namespace ApplicationLogger
                                ? powerValues[pd.Value.ToString()]
                                : pd.Value.ToString();
                 mainForm.updateText("PowerEvent:" + name);
+
+                if (pd.Value.ToString() == "4")
+                {
+                    mainForm.setIdle(true);
+                }
+                else if (pd.Value.ToString() == "18" || pd.Value.ToString() == "7")
+                {
+                    mainForm.setIdle(false);
+                }
             }
         }
         public void Stop()
@@ -124,9 +135,7 @@ namespace ApplicationLogger
         }*/
 
 
-
-
-
+        
 
 
 
@@ -218,7 +227,7 @@ namespace ApplicationLogger
             //Console.Write("LOG ==> " + lineToLog.ToString());
 
             queuedLogMessages.Add(lineToLog.ToString());
-            fixedSizeQueue.Enqueue(lineToLog.ToString());
+            fixedSizeLogQueue.Enqueue(lineToLog.ToString());
 
             lastDayLineLogged = DateTime.Now.Day;
 
@@ -346,11 +355,11 @@ namespace ApplicationLogger
             var foregroundWindowHandle = SystemHelper.GetForegroundWindow();
             Process process = null;
             int count = 0;
-            
+            bool somethingOnFocus = false;
 
             do{
                 bool doesUserProcessExist = false;
-
+                
                 foreach (Process proc in processes)
                 {
                     // ONLY RUN IF THIS IS THE FIRST TIME userProcesses foreach LOOP IS LOOPING
@@ -360,6 +369,7 @@ namespace ApplicationLogger
 
                         if (proc.MainWindowHandle == foregroundWindowHandle)
                         {
+                            somethingOnFocus = true;
                             process = proc;
                         }
                     }
@@ -385,8 +395,18 @@ namespace ApplicationLogger
 
             } while(count < userProcesses.Count);
 
+            mainForm.changeFocusDebug(somethingOnFocus + "");
 
-            // Nothing found!
+            if (!somethingOnFocus)
+            {
+                if (fixedSizeLogQueue.Last<string>().IndexOf("status::onDesktop") < 0)
+                {
+                    mainForm.updateText("status::onDesktop");
+                    logLine("status::onDesktop");
+                }
+            }
+
+            // Return the process or null if nothing found
             return process;
         }
 
@@ -397,11 +417,6 @@ namespace ApplicationLogger
                 commitLines();
             }
         }
-
-
-
-
-
     }
 
 
