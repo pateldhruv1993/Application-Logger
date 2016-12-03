@@ -111,7 +111,6 @@ namespace ApplicationLogger
 
 
 
-
         /*
 
         public bool getMonitorState()

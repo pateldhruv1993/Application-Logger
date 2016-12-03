@@ -17,6 +17,8 @@ public class SystemHelper {
 	[DllImport("user32.dll", CharSet=CharSet.Auto, ExactSpelling=true)]
 	public static extern IntPtr GetForegroundWindow();
 
+    public static bool cannotGetPowercfg = true;
+
 	public static uint GetIdleTime() {
 		LASTINPUTINFO lastInPut = new LASTINPUTINFO();
 		lastInPut.cbSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf(lastInPut);
@@ -58,10 +60,12 @@ public class SystemHelper {
                 output += p.StandardOutput.ReadToEnd();
             }
             p.WaitForExit();
+            cannotGetPowercfg = false;
+
         }
         catch (Exception err)
         {
-
+            cannotGetPowercfg = true;
         }
     }
 
