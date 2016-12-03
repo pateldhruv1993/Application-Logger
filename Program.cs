@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Windows.Forms;
+using Microsoft.Win32;
 
 namespace ApplicationLogger {
 	static class Program {
@@ -10,6 +11,7 @@ namespace ApplicationLogger {
 		/// </summary>
 		[STAThread]
 		static void Main() {
+
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
 

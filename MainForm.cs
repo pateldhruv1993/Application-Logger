@@ -35,12 +35,13 @@ namespace ApplicationLogger
         private bool allowShow;
         private bool isRunning;
         private bool isUserIdle;
-        private bool hasInitialized;		
-        
+        private bool hasInitialized;
+        private int numberOfTCPAttempts = 0;
 
         private ConfigManager configMgr = new ConfigManager();
         private LoggingManager logMgr;
-
+        private PowerChecker powerChecker;
+        
         //Variables for ICP
         TcpClient tcpclient;
         Stream stm;
@@ -107,9 +108,8 @@ namespace ApplicationLogger
             
             
 
-            // Check the user is idle
-            //if (SystemHelper.GetIdleTime() >= configMgr.config.idleTime * 1000f)
-            if()
+            // Check if the user is idle
+            if (SystemHelper.GetIdleTime() >= configMgr.config.idleTime * 1000f)
             {
                 if (!isUserIdle)
                 {
@@ -164,7 +164,10 @@ namespace ApplicationLogger
                 else
                 {
                     connectedToIPCLabel.Text = "Connected to IPC: FALSE";
-                    connectToIPCServer();
+                    numberOfTCPAttempts++;
+                    if (numberOfTCPAttempts < configMgr.config.maxTCPAttempts) { 
+                        connectToIPCServer();
+                    }
                 }
 
                 IPCSkipCount = 0;
@@ -246,6 +249,9 @@ namespace ApplicationLogger
                 // Initialize logging manager class through its constructor
                 logMgr = new LoggingManager(configMgr, this);
 
+                // Initialize power checker
+                Console.WriteLine("------------ MESSAGE --------------");
+                powerChecker = new PowerChecker();
 
                 allowClose = false;
                 isRunning = false;

@@ -1,5 +1,6 @@
 ﻿BUG:
-- Everything is being registed 3 times
+- When you right click while on some program the logger thinks you're on desktop as the getForegroundProcess probly return uninterpretable value. Solution would be to have a "defferedLogLine" function
+	for logging that will put on::Desktop only if its still on desktop for some period of time, otherwise it would just consider the last forground process to be in foreground
 - There seems to be a problem with status::idle. Its being triggered lot of times in a small time period
 
 FEATURES:

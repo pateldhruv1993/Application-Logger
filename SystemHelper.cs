@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 public class SystemHelper {
@@ -37,6 +38,32 @@ public class SystemHelper {
 
 		return lastInPut.dwTime;
 	}
+
+
+    public static void GetPowerCfgOutput()
+    {
+        try
+        {
+            Process p = new Process();
+            p.StartInfo.UseShellExecute = false;
+            p.StartInfo.RedirectStandardOutput = true;
+            p.StartInfo.CreateNoWindow = true;
+            p.StartInfo.FileName = "powercfg";
+            p.StartInfo.Arguments = "/requests";
+            p.Start();
+
+            string output = "";
+            while (!p.HasExited)
+            {
+                output += p.StandardOutput.ReadToEnd();
+            }
+            p.WaitForExit();
+        }
+        catch (Exception err)
+        {
+
+        }
+    }
 
 	internal struct LASTINPUTINFO {
 		public uint cbSize;

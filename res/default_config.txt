@@ -90,7 +90,7 @@ serverPort=6969
 #   maxTCPAttempts=0
 #
 
-maxTCPAttempts=0
+maxTCPAttempts=5
 
 
 # How frequently should the app read the TCP stream for instructions
