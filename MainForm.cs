@@ -2,6 +2,7 @@
 using System;
 using Microsoft.Win32;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 using System.Windows.Forms;
@@ -50,13 +51,7 @@ namespace ApplicationLogger
         int IPCSkipCount = 0;
 
 
-
-
-
         delegate void SetTextCallback(string text);
-
-
-
 
 
         public MainForm()
@@ -100,86 +95,6 @@ namespace ApplicationLogger
 
             // If debugging, un-hook itself from startup
             if (System.Diagnostics.Debugger.IsAttached && windowsRunAtStartup) windowsRunAtStartup = false;
-        }
-        
-        private void onTimer(object sender, EventArgs e)
-        {
-            // Timer tick: check for the current application
-            
-            
-
-            // Check if the user is idle
-            if (SystemHelper.GetIdleTime() >= configMgr.config.idleTime * 1000f)
-            {
-                if (!isUserIdle)
-                {
-                    // User is now idle
-                    isUserIdle = true;
-                    logMgr.logUserIdle();
-                }
-            }
-            else
-            {
-                if (isUserIdle)
-                {
-                    // User is not idle anymore
-                    isUserIdle = false;
-                }
-            }
-
-            // Check the user process
-            if (!isUserIdle)
-            {
-                logMgr.checkForNewProcess();
-            }
-
-
-            //TCP Client Stuff
-            if (IPCSkipCount >= 3)//configMgr.config.TCPInterval)
-            {
-                if (isConnectedIPCServer)
-                {
-                    connectedToIPCLabel.Text = "Connected to IPC: TRUE";
-                    try
-                    {
-
-                        byte[] bb = new byte[100];
-                        int k = stm.Read(bb, 0, 100);
-                        if (k != 0)
-                        {
-                            String receivedData = System.Text.Encoding.Default.GetString(bb);
-                            byte[] ba = asen.GetBytes("Say it don't spray it Ron.");
-                            stm.Write(ba, 0, ba.Length);
-                        }
-                        isConnectedIPCServer = true;
-                    }
-                    catch (Exception excep)
-                    {
-                        Console.WriteLine("Error..... " + excep.StackTrace);
-
-                        //May be you got disconnected??
-                        isConnectedIPCServer = false;
-                    }
-                }
-                else
-                {
-                    connectedToIPCLabel.Text = "Connected to IPC: FALSE";
-                    numberOfTCPAttempts++;
-                    if (numberOfTCPAttempts < configMgr.config.maxTCPAttempts) { 
-                        connectToIPCServer();
-                    }
-                }
-
-                IPCSkipCount = 0;
-
-            }
-            else
-            {
-                IPCSkipCount++;
-            }
-
-            // Write to log if enough time passed
-            logMgr.checkIfShouldCommit();
         }
 
         private void onResize(object sender, EventArgs e)
@@ -235,45 +150,80 @@ namespace ApplicationLogger
             showForm();
         }
 
-
-        private void initializeForm()
+        private bool windowsRunAtStartup
         {
-            // Initialize
-
-            if (!hasInitialized)
+            // Whether it's actually set to run at startup or not
+            get
             {
+                return getStartupRegistryKey().GetValue(REGISTRY_KEY_ID) != null;
+            }
+            set
+            {
+                if (value)
+                {
+                    // Add
+                    getStartupRegistryKey(true).SetValue(REGISTRY_KEY_ID, Application.ExecutablePath.ToString());
+                    //Console.WriteLine("RUN AT STARTUP SET AS => TRUE");
+                }
+                else
+                {
+                    // Remove
+                    getStartupRegistryKey(true).DeleteValue(REGISTRY_KEY_ID, false);
+                    //Console.WriteLine("RUN AT STARTUP SET AS => FALSE");
+                }
+            }
+        }
 
-                // Read configuration
-                configMgr.readConfiguration();
+        private RegistryKey getStartupRegistryKey(bool writable = false)
+        {
+            return Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", writable);
+        }
 
-                // Initialize logging manager class through its constructor
-                logMgr = new LoggingManager(configMgr, this);
+        public void updateContextMenu()
+        {
+            // Update start/stop command
+            if (menuItemStartStop != null)
+            {
+                if (isRunning)
+                {
+                    menuItemStartStop.Text = "&Stop";
+                }
+                else
+                {
+                    menuItemStartStop.Text = "&Start";
+                }
+            }
 
-                // Initialize power checker
-                Console.WriteLine("------------ MESSAGE --------------");
-                powerChecker = new PowerChecker();
+            // Update filename
+            if (menuItemOpenLog != null)
+            {
+                var filename = logMgr.getLogFileName();
+                if (!System.IO.File.Exists(filename))
+                {
+                    // Doesn't exist
+                    menuItemOpenLog.Text = "Open &log file";
+                    menuItemOpenLog.Enabled = false;
+                }
+                else
+                {
+                    // Exists
+                    menuItemOpenLog.Text = "Open &log file (" + filename + ")";
+                    menuItemOpenLog.Enabled = true;
+                }
+            }
+        }
 
-                allowClose = false;
-                isRunning = false;
-                allowShow = false;
-
-                // Force working folder
-                System.IO.Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
-
-
-                // Create context menu for the tray icon and update it
-                createContextMenu();
-
-                // Update tray
-                updateTrayIcon();
-
-                // Check if it needs to run at startup
-                applySettingsRunAtStartup();
-
-                // Finally, start
-                start();
-
-                hasInitialized = true;
+        private void updateTrayIcon()
+        {
+            if (isRunning)
+            {
+                notifyIcon.Icon = ApplicationLogger.Properties.Resources.iconNormal;
+                notifyIcon.Text = "Application Logger (started)";
+            }
+            else
+            {
+                notifyIcon.Icon = ApplicationLogger.Properties.Resources.iconStopped;
+                notifyIcon.Text = "Application Logger (stopped)";
             }
         }
 
@@ -325,51 +275,156 @@ namespace ApplicationLogger
             updateContextMenu();
         }
 
-        public void updateContextMenu()
-        {
-            // Update start/stop command
-            if (menuItemStartStop != null)
+
+
+
+
+        
+
+
+        private void checkIfIdle(){
+            bool shouldWriteToLog = false;
+
+            if (!isUserIdle)
             {
-                if (isRunning)
-                {
-                    menuItemStartStop.Text = "&Stop";
-                }
-                else
-                {
-                    menuItemStartStop.Text = "&Start";
-                }
+                shouldWriteToLog = true;
             }
 
-            // Update filename
-            if (menuItemOpenLog != null)
+            // Primary idle check based on delay from users input
+            if (SystemHelper.GetIdleTime() >= configMgr.config.idleTime * 1000f)
             {
-                var filename = logMgr.getLogFileName();
-                if (!System.IO.File.Exists(filename))
-                {
-                    // Doesn't exist
-                    menuItemOpenLog.Text = "Open &log file";
-                    menuItemOpenLog.Enabled = false;
-                }
-                else
-                {
-                    // Exists
-                    menuItemOpenLog.Text = "Open &log file (" + filename + ")";
-                    menuItemOpenLog.Enabled = true;
-                }
-            }
-        }
-
-        private void updateTrayIcon()
-        {
-            if (isRunning)
-            {
-                notifyIcon.Icon = ApplicationLogger.Properties.Resources.iconNormal;
-                notifyIcon.Text = "Application Logger (started)";
+                // User is now idle
+                isUserIdle = true;
             }
             else
             {
-                notifyIcon.Icon = ApplicationLogger.Properties.Resources.iconStopped;
-                notifyIcon.Text = "Application Logger (stopped)";
+                // User is not idle anymore
+                isUserIdle = false;
+            }
+            
+            
+
+            // Secondary idle check to see if the user is not using any input becaue he is watching a video or something
+            if (isUserIdle)
+            {
+                SystemHelper.GetPowerCfgOutput();
+                if (!SystemHelper.cannotGetPowercfg)
+                {
+                    // Prase output of powercfg and find if monitor is being used.
+                    // If not, detemine whether to consider user idle based on config.idleTime
+                    if (SystemHelper.powerCfgOutput.IndexOf("DISPLAY:\r\nNone.") == -1)
+                    {
+                        //isUserIdle = false;
+
+                    }
+                }
+            }
+
+            if (isUserIdle && shouldWriteToLog)
+            {
+                logMgr.logUserIdle();
+            }
+        }
+
+
+
+
+        /// <summary>
+        ///  Main loop of the program that loops on timer
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void onTimer(object sender, EventArgs e)
+        {
+
+            checkIfIdle();
+            
+            // Check the user process
+            if (!isUserIdle)
+            {
+                logMgr.checkForNewProcess();
+            }
+
+
+            //TCP Client Stuff
+            if (IPCSkipCount >= 3)//configMgr.config.TCPInterval)
+            {
+                if (isConnectedIPCServer)
+                {
+                    connectedToIPCLabel.Text = "Connected to IPC: TRUE";
+                    try
+                    {
+                        String receivedData = getDataFromIPCServer();
+                        isConnectedIPCServer = true;
+                    }
+                    catch (Exception excep)
+                    {
+                        Console.WriteLine("Error..... " + excep.StackTrace);
+
+                        //May be you got disconnected??
+                        isConnectedIPCServer = false;
+                    }
+                }
+                else
+                {
+                    connectedToIPCLabel.Text = "Connected to IPC: FALSE";
+                    numberOfTCPAttempts++;
+                    if (numberOfTCPAttempts < configMgr.config.maxTCPAttempts) { 
+                        connectToIPCServer();
+                    }
+                }
+
+                IPCSkipCount = 0;
+
+            }
+            else
+            {
+                IPCSkipCount++;
+            }
+
+            // Write to log if enough time passed
+            logMgr.checkIfShouldCommit();
+        }
+
+
+        private void initializeForm()
+        {
+            // Initialize
+
+            if (!hasInitialized)
+            {
+
+                // Read configuration
+                configMgr.readConfiguration();
+
+                // Initialize logging manager class through its constructor
+                logMgr = new LoggingManager(configMgr, this);
+
+                // Initialize power checker
+                Console.WriteLine("------------ MESSAGE --------------");
+                powerChecker = new PowerChecker();
+
+                allowClose = false;
+                isRunning = false;
+                allowShow = false;
+
+                // Force working folder
+                System.IO.Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
+
+
+                // Create context menu for the tray icon and update it
+                createContextMenu();
+
+                // Update tray
+                updateTrayIcon();
+
+                // Check if it needs to run at startup
+                applySettingsRunAtStartup();
+
+                // Finally, start
+                start();
+
+                hasInitialized = true;
             }
         }
 
@@ -387,14 +442,10 @@ namespace ApplicationLogger
                 isRunning = true;
                 logMgr.fixedSizeLogQueue = new FixedSizedQueue<string>(Int32.Parse(configMgr.config.maxLogCache + ""));
 
-
                 //Log system start (Not really. This just means app started. BUT as I plan to run it on startup, this should be good)
                 logMgr.logLine("status::start");
 
-
                 connectToIPCServer();
-                
-
 
                 updateContextMenu();
                 updateTrayIcon();
@@ -484,7 +535,6 @@ namespace ApplicationLogger
         {
             allowClose = true;
             Close();
-            logMgr.Stop();
         }
 
         
@@ -500,35 +550,6 @@ namespace ApplicationLogger
                 Settings.Default[SETTINGS_FIELD_RUN_AT_STARTUP] = value;
                 Settings.Default.Save();
             }
-        }
-
-        private bool windowsRunAtStartup
-        {
-            // Whether it's actually set to run at startup or not
-            get
-            {
-                return getStartupRegistryKey().GetValue(REGISTRY_KEY_ID) != null;
-            }
-            set
-            {
-                if (value)
-                {
-                    // Add
-                    getStartupRegistryKey(true).SetValue(REGISTRY_KEY_ID, Application.ExecutablePath.ToString());
-                    //Console.WriteLine("RUN AT STARTUP SET AS => TRUE");
-                }
-                else
-                {
-                    // Remove
-                    getStartupRegistryKey(true).DeleteValue(REGISTRY_KEY_ID, false);
-                    //Console.WriteLine("RUN AT STARTUP SET AS => FALSE");
-                }
-            }
-        }
-
-        private RegistryKey getStartupRegistryKey(bool writable = false)
-        {
-            return Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", writable);
         }
 
 
@@ -553,10 +574,18 @@ namespace ApplicationLogger
         }
 
 
-
-        public void setIdle(bool userIdle)
+        private String getDataFromIPCServer()
         {
-            isUserIdle = userIdle;
+            String receivedData = "";
+            byte[] bb = new byte[100];
+            int k = stm.Read(bb, 0, 100);
+            if (k != 0)
+            {
+                receivedData = System.Text.Encoding.Default.GetString(bb);
+                byte[] ba = asen.GetBytes("Message Received. - Dhruv");
+                stm.Write(ba, 0, ba.Length);
+            }
+            return receivedData;
         }
         
     }

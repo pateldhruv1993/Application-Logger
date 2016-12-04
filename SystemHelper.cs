@@ -18,7 +18,7 @@ public class SystemHelper {
 	public static extern IntPtr GetForegroundWindow();
 
     public static bool cannotGetPowercfg = true;
-
+    public static String powerCfgOutput = "";
 	public static uint GetIdleTime() {
 		LASTINPUTINFO lastInPut = new LASTINPUTINFO();
 		lastInPut.cbSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf(lastInPut);
@@ -49,25 +49,31 @@ public class SystemHelper {
             Process p = new Process();
             p.StartInfo.UseShellExecute = false;
             p.StartInfo.RedirectStandardOutput = true;
+            p.StartInfo.RedirectStandardError = true;
+            p.ErrorDataReceived += cmdError;
             p.StartInfo.CreateNoWindow = true;
             p.StartInfo.FileName = "powercfg";
             p.StartInfo.Arguments = "/requests";
             p.Start();
 
-            string output = "";
             while (!p.HasExited)
             {
-                output += p.StandardOutput.ReadToEnd();
+                powerCfgOutput += p.StandardOutput.ReadToEnd();
             }
-            p.WaitForExit();
+            p.WaitForExit();;
             cannotGetPowercfg = false;
-
         }
         catch (Exception err)
         {
             cannotGetPowercfg = true;
         }
     }
+
+    static void cmdError(object sender, DataReceivedEventArgs e)
+    {
+        cannotGetPowercfg = true;
+    }
+
 
 	internal struct LASTINPUTINFO {
 		public uint cbSize;
