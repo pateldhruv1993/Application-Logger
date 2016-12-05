@@ -1,7 +1,6 @@
 ﻿BUG:
 - When you right click while on some program the logger thinks you're on desktop as the getForegroundProcess probly return uninterpretable value. Solution would be to have a "defferedLogLine" function
 	for logging that will put on::Desktop only if its still on desktop for some period of time, otherwise it would just consider the last forground process to be in foreground
-- There seems to be a problem with status::idle. Its being triggered lot of times in a small time period
 
 FEATURES:
 
@@ -18,8 +17,11 @@ FEATURES:
 	NOTE 2: Seems like the UI lag is almost unnoticable when the app is actually connected to the TCP server for IPC. The app only lags when it tries to connect to the server and "times out ??"
 			So you might not want to do multi threading at all
 
+
+FEATURES THAT HAVE BEEN ADDED:
+
 ✓ Make server and Port for the TCP server editable in config (.cfg) file
-✓ Make a FIFO list of configurable lenght that will store log lines and won't "null" the list upon log saving. This is so that other apps can make requests such as "Give me last 5 entires"
+✓ Make a FIFO list of configurable length that will store log lines and won't "null" the list upon log saving. This is so that other apps can make requests such as "Give me last 5 entires"
 ✓ Find a way to log "start" and "end" of Logger
 ✓ Connect with the node app using TCP to communicate with it
 ✓ Add some more UI elements to the form so you can show debug info and Application log in two different text labels

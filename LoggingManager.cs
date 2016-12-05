@@ -16,7 +16,7 @@ namespace ApplicationLogger
 
         private const string LINE_DIVIDER = "\t";
         private const string LINE_END = "\r\n";
-        private const string DATE_TIME_FORMAT = "o";							            // 2008-06-15T21:15:07.0000000
+        private const string DATE_TIME_FORMAT = "R";							            // 2008-06-15T21:15:07.0000000
 
 
 
@@ -116,8 +116,11 @@ namespace ApplicationLogger
             lineToLog.Append(LINE_DIVIDER);
             lineToLog.Append(pID);
             lineToLog.Append(LINE_DIVIDER);
-            lineToLog.Append(Environment.MachineName);
-            lineToLog.Append(LINE_DIVIDER);
+
+            // Not putting the GAMINGPC in log as it seems to be usless
+            /*lineToLog.Append(Environment.MachineName);
+            lineToLog.Append(LINE_DIVIDER);*/
+
             lineToLog.Append(title);
             lineToLog.Append(LINE_DIVIDER);
             lineToLog.Append(location);
